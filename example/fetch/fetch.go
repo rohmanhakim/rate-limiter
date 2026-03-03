@@ -100,7 +100,12 @@ type MultiServiceClient struct {
 // NewMultiServiceClient creates a new multi-service client with rate limiting
 func NewMultiServiceClient() *MultiServiceClient {
 	return &MultiServiceClient{
-		limiter:   ratelimiter.NewConcurrentRateLimiter(),
+		limiter: ratelimiter.NewConcurrentRateLimiter(
+			ratelimiter.WithJitter(100*time.Millisecond),
+			ratelimiter.WithInitialDuration(1*time.Second),
+			ratelimiter.WithMultiplier(2.0),
+			ratelimiter.WithMaxDuration(30*time.Second),
+		),
 		ctx:       context.Background(),
 		client:    &http.Client{Timeout: 10 * time.Second},
 		hostState: newHostState(),

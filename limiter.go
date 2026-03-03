@@ -33,12 +33,16 @@ type ConcurrentRateLimiter struct {
 	debugLogger     DebugLogger
 }
 
-func NewConcurrentRateLimiter() *ConcurrentRateLimiter {
+func NewConcurrentRateLimiter(opts ...RateLimiterOption) *ConcurrentRateLimiter {
 	config := defaults()
+	for _, opt := range opts {
+		opt(&config)
+	}
 	return &ConcurrentRateLimiter{
 		resourceTimings: make(map[string]resourceTiming),
 		config:          config,
 		debugLogger:     config.debugLogger,
+		jitter:          config.jitter,
 	}
 }
 
