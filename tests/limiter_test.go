@@ -138,20 +138,38 @@ func TestConcurrentRateLimiter_ResetBackoff(t *testing.T) {
 	}
 }
 
-func TestConcurrentRateLimiter_MarkLastConsumedAsNow(t *testing.T) {
-	limiter := ratelimiter.NewConcurrentRateLimiter()
+func TestConcurrentRateLimiter_Wait(t *testing.T) {
+	t.Run("marks last consumed time after waiting", func(t *testing.T) {
+		limiter := ratelimiter.NewConcurrentRateLimiter()
 
-	before := time.Now()
-	limiter.MarkLastConsumedAsNow("api.example.com")
-	after := time.Now()
+		before := time.Now()
+		_ = limiter.Wait(context.Background(), "api.example.com")
+		after := time.Now()
 
-	timings := limiter.ResourceTimings()
-	timing := timings["api.example.com"]
-	lastConsumed := timing.LastConsumedAt()
+		timings := limiter.ResourceTimings()
+		timing := timings["api.example.com"]
+		lastConsumed := timing.LastConsumedAt()
 
-	if lastConsumed.Before(before) || lastConsumed.After(after) {
-		t.Errorf("expected last consumed time between %v and %v, got %v", before, after, lastConsumed)
-	}
+		if lastConsumed.Before(before) || lastConsumed.After(after) {
+			t.Errorf("expected last consumed time between %v and %v, got %v", before, after, lastConsumed)
+		}
+	})
+
+	t.Run("returns error when context is cancelled", func(t *testing.T) {
+		limiter := ratelimiter.NewConcurrentRateLimiter()
+		limiter.SetBaseDelay(5 * time.Second)
+
+		// First call to register the resource
+		_ = limiter.Wait(context.Background(), "api.example.com")
+
+		// Second call with cancelled context should return immediately with error
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		err := limiter.Wait(ctx, "api.example.com")
+		if err == nil {
+			t.Error("expected error when context is cancelled")
+		}
+	})
 }
 
 func TestConcurrentRateLimiter_ResolveDelay(t *testing.T) {
@@ -164,22 +182,22 @@ func TestConcurrentRateLimiter_ResolveDelay(t *testing.T) {
 		}
 	})
 
-	t.Run("returns remaining delay after marking consumed", func(t *testing.T) {
+	t.Run("returns remaining delay after waiting", func(t *testing.T) {
 		limiter := ratelimiter.NewConcurrentRateLimiter()
 		limiter.SetBaseDelay(5 * time.Second)
-		limiter.MarkLastConsumedAsNow("api.example.com")
+		_ = limiter.Wait(context.Background(), "api.example.com")
 
-		// Immediately after marking, remaining delay should be close to base delay
+		// Immediately after waiting, remaining delay should be close to base delay
 		delay := limiter.ResolveDelay(context.Background(), "api.example.com")
 		if delay < 4*time.Second {
 			t.Errorf("expected delay >= 4s, got %v", delay)
 		}
 	})
 
-	t.Run("returns zero delay after waiting", func(t *testing.T) {
+	t.Run("returns zero delay after time passes", func(t *testing.T) {
 		limiter := ratelimiter.NewConcurrentRateLimiter()
 		limiter.SetBaseDelay(100 * time.Millisecond)
-		limiter.MarkLastConsumedAsNow("api.example.com")
+		_ = limiter.Wait(context.Background(), "api.example.com")
 
 		// Wait for delay to pass
 		time.Sleep(150 * time.Millisecond)
@@ -194,7 +212,7 @@ func TestConcurrentRateLimiter_ResolveDelay(t *testing.T) {
 		limiter := ratelimiter.NewConcurrentRateLimiter(
 			ratelimiter.WithInitialDuration(5 * time.Second),
 		)
-		limiter.MarkLastConsumedAsNow("api.example.com")
+		_ = limiter.Wait(context.Background(), "api.example.com")
 		limiter.Backoff(context.Background(), "api.example.com")
 
 		delay := limiter.ResolveDelay(context.Background(), "api.example.com")
@@ -206,7 +224,7 @@ func TestConcurrentRateLimiter_ResolveDelay(t *testing.T) {
 	t.Run("respects resource delay", func(t *testing.T) {
 		limiter := ratelimiter.NewConcurrentRateLimiter()
 		limiter.SetResourceDelay("api.example.com", 5*time.Second)
-		limiter.MarkLastConsumedAsNow("api.example.com")
+		_ = limiter.Wait(context.Background(), "api.example.com")
 
 		delay := limiter.ResolveDelay(context.Background(), "api.example.com")
 		if delay < 4*time.Second {
@@ -218,7 +236,7 @@ func TestConcurrentRateLimiter_ResolveDelay(t *testing.T) {
 func TestConcurrentRateLimiter_ResourceTimings(t *testing.T) {
 	t.Run("returns copy of timings map", func(t *testing.T) {
 		limiter := ratelimiter.NewConcurrentRateLimiter()
-		limiter.MarkLastConsumedAsNow("api.example.com")
+		_ = limiter.Wait(context.Background(), "api.example.com")
 
 		timings1 := limiter.ResourceTimings()
 		timings2 := limiter.ResourceTimings()
@@ -246,9 +264,9 @@ func TestConcurrentRateLimiter_Concurrency(t *testing.T) {
 		go func(id int) {
 			resource := "api.example.com"
 			for j := 0; j < 100; j++ {
-				limiter.MarkLastConsumedAsNow(resource)
+				_ = limiter.Wait(context.Background(), resource)
 				limiter.Backoff(context.Background(), resource)
-				limiter.ResolveDelay(context.Background(), resource)
+				_ = limiter.ResolveDelay(context.Background(), resource)
 				limiter.ResetBackoff(resource)
 			}
 			done <- true

@@ -135,13 +135,10 @@ func (c *SimpleClient) execute() {
 
 // makeRequest performs a single HTTP request with rate limiting.
 func (c *SimpleClient) makeRequest(host string, requestNum int) {
-	// Resolve delay from rate limiter before making request
-	delay := c.limiter.ResolveDelay(c.ctx, host)
-
-	// Wait if we're being rate-limited
-	if delay > 0 {
-		fmt.Printf("[client] ⏳ Rate limit: waiting %s before request #%d\n", delay.Round(time.Millisecond), requestNum)
-		time.Sleep(delay)
+	// Wait for rate limiter to allow the request
+	if err := c.limiter.Wait(c.ctx, host); err != nil {
+		fmt.Printf("[client] ❌ Wait cancelled for request #%d: %v\n", requestNum, err)
+		return
 	}
 
 	// Create request
@@ -173,7 +170,4 @@ func (c *SimpleClient) makeRequest(host string, requestNum int) {
 	} else {
 		fmt.Printf("[client] ⚠️  Unexpected status %d on request #%d\n", resp.StatusCode, requestNum)
 	}
-
-	// Mark last consumed time
-	c.limiter.MarkLastConsumedAsNow(host)
 }

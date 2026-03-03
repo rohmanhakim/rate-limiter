@@ -226,13 +226,11 @@ func (m *MultiServiceClient) runWorker(host string, workerID, requestCount int, 
 func (m *MultiServiceClient) makeRequest(host, agent string, requestNum int) {
 	atomic.AddInt64(&m.stats.TotalRequests, 1)
 
-	// Resolve delay from rate limiter before making request
-	delay := m.limiter.ResolveDelay(m.ctx, host)
-
-	// Log if we're being rate-limited
-	if delay > 0 {
-		fmt.Printf("[client] ⏳ [%s] Rate limit: waiting %s before request #%d\n", agent, delay.Round(time.Millisecond), requestNum)
-		time.Sleep(delay)
+	// Wait for rate limiter to allow the request
+	if err := m.limiter.Wait(m.ctx, host); err != nil {
+		fmt.Printf("[client] ❌ [%s] Wait cancelled for request #%d: %v\n", agent, requestNum, err)
+		atomic.AddInt64(&m.stats.ErrorCount, 1)
+		return
 	}
 
 	// Create new request for each call (don't reuse)
@@ -265,9 +263,6 @@ func (m *MultiServiceClient) makeRequest(host, agent string, requestNum int) {
 		fmt.Printf("[client] ⚠️  [%s] Unexpected status %d on request #%d\n", agent, resp.StatusCode, requestNum)
 		atomic.AddInt64(&m.stats.ErrorCount, 1)
 	}
-
-	// Mark last consumed time
-	m.limiter.MarkLastConsumedAsNow(host)
 }
 
 // handleSuccess processes a successful response
@@ -322,19 +317,4 @@ func parseServerDelay(body string) time.Duration {
 		return 0
 	}
 	return time.Duration(seconds * float64(time.Second))
-}
-
-// printSummary displays final statistics
-func (m *MultiServiceClient) printSummary(duration time.Duration) {
-	fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("📊 SUMMARY")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Printf("   Total requests:  %d\n", m.stats.TotalRequests)
-	fmt.Printf("   Successful:      %d ✅\n", m.stats.SuccessCount)
-	fmt.Printf("   Rate limited:    %d 🔴\n", m.stats.RateLimited)
-	fmt.Printf("   Backoff events:  %d ⚡\n", m.stats.BackoffCount)
-	fmt.Printf("   Backoff resets:  %d 🔄\n", m.stats.BackoffReset)
-	fmt.Printf("   Errors:          %d ❌\n", m.stats.ErrorCount)
-	fmt.Printf("   Duration:        %s\n", duration.Round(time.Millisecond))
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 }

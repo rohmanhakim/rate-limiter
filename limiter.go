@@ -20,7 +20,7 @@ type RateLimiter interface {
 	SetResourceDelay(resource string, delay time.Duration)
 	Backoff(ctx context.Context, resource string, serverDelay ...time.Duration)
 	ResetBackoff(resource string)
-	MarkLastConsumedAsNow(resource string)
+	Wait(ctx context.Context, resource string) error
 	ResolveDelay(ctx context.Context, resource string) time.Duration
 }
 
@@ -145,8 +145,27 @@ func (r *ConcurrentRateLimiter) ResetBackoff(host string) {
 	}
 }
 
-// Mark the given host lastFetch to time.Now()
-func (r *ConcurrentRateLimiter) MarkLastConsumedAsNow(host string) {
+// Wait blocks until the resource is ready to be consumed.
+// It resolves the delay, waits if necessary, and marks the last consumed time.
+// Returns nil when ready to proceed, or error if context is cancelled.
+func (r *ConcurrentRateLimiter) Wait(ctx context.Context, resource string) error {
+	delay := r.ResolveDelay(ctx, resource)
+
+	if delay > 0 {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+	}
+
+	// Mark internally - no need for user to call
+	r.markLastConsumedAsNow(resource)
+	return nil
+}
+
+// markLastConsumedAsNow marks the given host's lastConsumedAt to time.Now()
+func (r *ConcurrentRateLimiter) markLastConsumedAsNow(host string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

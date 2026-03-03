@@ -10,6 +10,11 @@ var ExponentialBackoffDelay = exponentialBackoffDelay
 var MaxDuration = maxDuration
 var DetermineRateLimitReason = determineRateLimitReason
 
+// MarkLastConsumedAsNow exports the private markLastConsumedAsNow method for testing.
+func (r *ConcurrentRateLimiter) MarkLastConsumedAsNow(host string) {
+	r.markLastConsumedAsNow(host)
+}
+
 // Export internal types for testing via type aliases.
 type ResourceTiming = resourceTiming
 type BackoffConfig = backoffConfig
