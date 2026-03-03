@@ -10,19 +10,19 @@ type resourceTiming struct {
 	backoffCount   int
 }
 
-func (h *resourceTiming) Delay() time.Duration {
+func (h resourceTiming) Delay() time.Duration {
 	return h.delay
 }
 
-func (h *resourceTiming) BackoffDelay() time.Duration {
+func (h resourceTiming) BackoffDelay() time.Duration {
 	return h.backoffDelay
 }
 
-func (h *resourceTiming) LastConsumedAt() time.Time {
+func (h resourceTiming) LastConsumedAt() time.Time {
 	return h.lastConsumedAt
 }
 
-func (h *resourceTiming) BackoffCount() int {
+func (h resourceTiming) BackoffCount() int {
 	return h.backoffCount
 }
 
