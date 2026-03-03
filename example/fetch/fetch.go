@@ -295,9 +295,13 @@ func (m *MultiServiceClient) handleSuccess(host, agent string, requestNum int, b
 func (m *MultiServiceClient) handleRateLimited(host, agent string, requestNum int, body []byte) {
 	atomic.AddInt64(&m.stats.RateLimited, 1)
 
+	// Parse server-suggested delay from response body
+	// Format: "too early - wait 0.500 seconds"
+	serverDelay := parseServerDelay(string(body))
+
 	// Trigger backoff and get the new count
 	backoffCount := m.hostState.incrementBackoffCount(host)
-	m.limiter.Backoff(m.ctx, host)
+	m.limiter.Backoff(m.ctx, host, serverDelay)
 	atomic.AddInt64(&m.stats.BackoffCount, 1)
 
 	// Resolve the delay to show what backoff delay was computed
@@ -306,6 +310,18 @@ func (m *MultiServiceClient) handleRateLimited(host, agent string, requestNum in
 	fmt.Printf("[client] 🔴 [%s] 429 on request #%d - backing off (count: %d, delay: %s)\n",
 		agent, requestNum, backoffCount, backoffDelay.Round(time.Millisecond))
 	fmt.Printf("[client]    Server message: %s\n", string(body))
+}
+
+// parseServerDelay extracts the delay duration from the server response.
+// Format: "too early - wait 0.500 seconds"
+// Returns 0 if parsing fails.
+func parseServerDelay(body string) time.Duration {
+	var seconds float64
+	n, err := fmt.Sscanf(body, "too early - wait %f seconds", &seconds)
+	if err != nil || n != 1 {
+		return 0
+	}
+	return time.Duration(seconds * float64(time.Second))
 }
 
 // printSummary displays final statistics

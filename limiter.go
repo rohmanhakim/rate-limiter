@@ -17,7 +17,7 @@ type RateLimiter interface {
 	SetBaseDelay(baseDelay time.Duration)
 	SetJitter(jitter time.Duration)
 	SetResourceDelay(resource string, delay time.Duration)
-	Backoff(ctx context.Context, resource string)
+	Backoff(ctx context.Context, resource string, serverDelay ...time.Duration)
 	ResetBackoff(resource string)
 	MarkLastConsumedAsNow(resource string)
 	ResolveDelay(ctx context.Context, resource string) time.Duration
@@ -78,9 +78,18 @@ func (r *ConcurrentRateLimiter) SetResourceDelay(resource string, delay time.Dur
 
 // Backoff triggers exponential backoff for the given resource.
 // It increments the backoff counter and computes the delay.
-func (r *ConcurrentRateLimiter) Backoff(ctx context.Context, resource string) {
+// The optional serverDelay parameter allows the caller to provide a
+// server-suggested delay (e.g., from Retry-After header or response body).
+// The initial backoff will be max(serverDelay, initialDuration).
+func (r *ConcurrentRateLimiter) Backoff(ctx context.Context, resource string, serverDelay ...time.Duration) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// Extract server delay if provided
+	var sd time.Duration
+	if len(serverDelay) > 0 {
+		sd = serverDelay[0]
+	}
 
 	currentHostTiming, exists := r.resourceTimings[resource]
 
@@ -91,13 +100,13 @@ func (r *ConcurrentRateLimiter) Backoff(ctx context.Context, resource string) {
 
 	if exists {
 		currentHostTiming.backoffCount++
-		currentHostTiming.backoffDelay = exponentialBackoffDelay(currentHostTiming.backoffCount, r.jitter, r.config.backoff)
+		currentHostTiming.backoffDelay = exponentialBackoffDelay(currentHostTiming.backoffCount, r.jitter, r.config.backoff, sd)
 		backoffDelay = currentHostTiming.backoffDelay
 		backoffCount = currentHostTiming.backoffCount
 		r.resourceTimings[resource] = currentHostTiming
 	} else {
 		// Initialize with backoffCount=1
-		backoffDelay = exponentialBackoffDelay(1, r.jitter, r.config.backoff)
+		backoffDelay = exponentialBackoffDelay(1, r.jitter, r.config.backoff, sd)
 		backoffCount = 1
 		r.resourceTimings[resource] = resourceTiming{
 			backoffCount: 1,
