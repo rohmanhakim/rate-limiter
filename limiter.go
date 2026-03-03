@@ -16,6 +16,7 @@ import (
 type RateLimiter interface {
 	SetBaseDelay(baseDelay time.Duration)
 	SetJitter(jitter time.Duration)
+	SetDebugLogger(logger DebugLogger)
 	SetResourceDelay(resource string, delay time.Duration)
 	Backoff(ctx context.Context, resource string, serverDelay ...time.Duration)
 	ResetBackoff(resource string)
@@ -58,6 +59,15 @@ func (r *ConcurrentRateLimiter) SetJitter(jitter time.Duration) {
 	defer r.mu.Unlock()
 
 	r.jitter = jitter
+}
+
+// SetDebugLogger sets the debug logger for the rate limiter.
+// This allows users to provide custom logging implementation.
+func (r *ConcurrentRateLimiter) SetDebugLogger(logger DebugLogger) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.debugLogger = logger
 }
 
 // Set delay to given resource, separated from global base delay
