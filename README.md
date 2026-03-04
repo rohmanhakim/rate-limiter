@@ -1,5 +1,6 @@
 # rate-limiter
 
+[![codecov](https://codecov.io/github/rohmanhakim/rate-limiter/graph/badge.svg?token=ENEK67CwCY)](https://codecov.io/github/rohmanhakim/rate-limiter)
 [![Go Reference](https://pkg.go.dev/badge/github.com/rohmanhakim/rate-limiter.svg)](https://pkg.go.dev/github.com/rohmanhakim/rate-limiter)
 
 A highly concurrent, thread-safe Go package for rate limiting resource consumption. Features granular delays, exponential backoff, and jitter support. Zero external dependencies.
