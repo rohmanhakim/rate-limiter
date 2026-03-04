@@ -296,7 +296,9 @@ func (m *MultiServiceClient) handleRateLimited(host, agent string, requestNum in
 
 	// Trigger backoff and get the new count
 	backoffCount := m.hostState.incrementBackoffCount(host)
-	m.limiter.Backoff(m.ctx, host, serverDelay)
+	m.limiter.Backoff(m.ctx, host, ratelimiter.BackoffOptions{
+		ServerDelay: serverDelay,
+	})
 	atomic.AddInt64(&m.stats.BackoffCount, 1)
 
 	// Resolve the delay to show what backoff delay was computed

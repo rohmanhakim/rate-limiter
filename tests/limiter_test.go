@@ -112,7 +112,9 @@ func TestConcurrentRateLimiter_Backoff(t *testing.T) {
 		)
 
 		serverDelay := 5 * time.Second
-		limiter.Backoff(context.Background(), "api.example.com", serverDelay)
+		limiter.Backoff(context.Background(), "api.example.com", ratelimiter.BackoffOptions{
+			ServerDelay: serverDelay,
+		})
 
 		timings := limiter.ResourceTimings()
 		timing := timings["api.example.com"]

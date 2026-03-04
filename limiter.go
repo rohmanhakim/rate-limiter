@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+// BackoffOptions configures backoff behavior.
+type BackoffOptions struct {
+	// ServerDelay is an optional server-suggested delay (e.g., from Retry-After header).
+	ServerDelay time.Duration
+}
+
 // RateLimiter
 // Specialized component to manage rate limiting during resource consumption
 // Responsibilities:
@@ -17,7 +23,7 @@ type RateLimiter interface {
 	SetJitter(jitter time.Duration)
 	SetDebugLogger(logger DebugLogger)
 	SetResourceDelay(resource string, delay time.Duration)
-	Backoff(ctx context.Context, resource string, serverDelay ...time.Duration)
+	Backoff(ctx context.Context, resource string, opts ...BackoffOptions)
 	ResetBackoff(resource string)
 	Wait(ctx context.Context, resource string) error
 	ResolveDelay(ctx context.Context, resource string) time.Duration
@@ -87,17 +93,17 @@ func (r *ConcurrentRateLimiter) SetResourceDelay(resource string, delay time.Dur
 
 // Backoff triggers exponential backoff for the given resource.
 // It increments the backoff counter and computes the delay.
-// The optional serverDelay parameter allows the caller to provide a
+// The optional opts parameter allows the caller to provide a
 // server-suggested delay (e.g., from Retry-After header or response body).
 // The initial backoff will be max(serverDelay, initialDuration).
-func (r *ConcurrentRateLimiter) Backoff(ctx context.Context, resource string, serverDelay ...time.Duration) {
+func (r *ConcurrentRateLimiter) Backoff(ctx context.Context, resource string, opts ...BackoffOptions) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	// Extract server delay if provided
 	var sd time.Duration
-	if len(serverDelay) > 0 {
-		sd = serverDelay[0]
+	if len(opts) > 0 {
+		sd = opts[0].ServerDelay
 	}
 
 	currentHostTiming, exists := r.resourceTimings[resource]
