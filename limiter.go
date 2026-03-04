@@ -152,10 +152,13 @@ func (r *ConcurrentRateLimiter) Wait(ctx context.Context, resource string) error
 	delay := r.ResolveDelay(ctx, resource)
 
 	if delay > 0 {
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-time.After(delay):
+		case <-timer.C:
 		}
 	}
 
