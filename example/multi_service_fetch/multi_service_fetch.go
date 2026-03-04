@@ -14,8 +14,8 @@ import (
 )
 
 func main() {
-	fmt.Println("🚀 Rate Limiter Demo - Concurrent Multi-Service Client")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println(" Rate Limiter Demo - Concurrent Multi-Service Client")
+	fmt.Println("========================================================")
 
 	// Start fake servers
 	servers := []*FakeServer{
@@ -40,11 +40,11 @@ func main() {
 	client.execute()
 
 	// Cleanup
-	fmt.Println("\n🛑 Shutting down servers...")
+	fmt.Println("\n Shutting down servers...")
 	for _, server := range servers {
 		server.Stop()
 	}
-	fmt.Println("✅ Demo completed!")
+	fmt.Println(" Demo completed!")
 }
 
 // Stats tracks request statistics
@@ -125,14 +125,14 @@ func (m *MultiServiceClient) execute() {
 	var wg sync.WaitGroup
 
 	// Phase 1: Respecting rate limits (each worker has unique User-Agent)
-	fmt.Println("╔═══════════════════════════════════════════════════════════╗")
-	fmt.Println("║  PHASE 1: Rate Limiting with Concurrent Workers           ║")
-	fmt.Println("║  Each worker has unique User-Agent - no 429s expected     ║")
-	fmt.Println("╚═══════════════════════════════════════════════════════════╝")
+	fmt.Println("=============================================================")
+	fmt.Println("|  PHASE 1: Rate Limiting with Concurrent Workers           |")
+	fmt.Println("|  Each worker has unique User-Agent - no 429s expected     |")
+	fmt.Println("=============================================================")
 	fmt.Println()
 
-	fmt.Printf("📡 Starting %d concurrent workers per host (%d hosts)\n", concurrentWorkers, len(serviceHosts))
-	fmt.Printf("📋 %d requests per worker\n\n", requestsPerHost)
+	fmt.Printf(" Starting %d concurrent workers per host (%d hosts)\n", concurrentWorkers, len(serviceHosts))
+	fmt.Printf(" %d requests per worker\n\n", requestsPerHost)
 
 	startTime := time.Now()
 
@@ -147,23 +147,20 @@ func (m *MultiServiceClient) execute() {
 	wg.Wait()
 
 	// Print phase 1 summary
-	fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("📊 PHASE 1 SUMMARY")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	m.printStats("Phase 1")
 
 	// Phase 2: Demonstrate backoff (workers share User-Agent, causing 429s)
-	fmt.Println("\n╔═══════════════════════════════════════════════════════════╗")
-	fmt.Println("║  PHASE 2: Backoff Demonstration                           ║")
-	fmt.Println("║  Workers share User-Agent - expect 429s and backoffs      ║")
-	fmt.Println("╚═══════════════════════════════════════════════════════════╝")
+	fmt.Println("\n=============================================================")
+	fmt.Println("|  PHASE 2: Backoff Demonstration                           |")
+	fmt.Println("|  Workers share User-Agent - expect 429s and backoffs      |")
+	fmt.Println("=============================================================")
 	fmt.Println()
 
 	// Reset stats for phase 2
 	m.stats = Stats{}
 
-	fmt.Printf("📡 Starting %d concurrent workers per host (SHARED User-Agent)\n", concurrentWorkers)
-	fmt.Printf("📋 %d requests per worker\n\n", 3)
+	fmt.Printf(" Starting %d concurrent workers per host (SHARED User-Agent)\n", concurrentWorkers)
+	fmt.Printf(" %d requests per worker\n\n", 3)
 
 	// Reset host state for phase 2
 	m.hostState = newHostState()
@@ -179,13 +176,10 @@ func (m *MultiServiceClient) execute() {
 	wg.Wait()
 
 	// Print final summary
-	fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("📊 PHASE 2 SUMMARY (Backoff Demo)")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	m.printStats("Phase 2")
+	m.printStats("Phase 2 (Backoff Summary)")
 
 	// Total duration
-	fmt.Printf("\n⏱️  Total duration: %s\n", time.Since(startTime).Round(time.Millisecond))
+	fmt.Printf("\n  Total duration: %s\n", time.Since(startTime).Round(time.Millisecond))
 }
 
 // runWorkerSharedAgent executes requests with a SHARED User-Agent per host
@@ -203,12 +197,15 @@ func (m *MultiServiceClient) runWorkerSharedAgent(host string, workerID, request
 
 // printStats displays statistics for a phase
 func (m *MultiServiceClient) printStats(phase string) {
+	fmt.Println("\n-------------------------------------------------------")
+	fmt.Printf("%s SUMMARY\n", phase)
+	fmt.Println("-------------------------------------------------------")
 	fmt.Printf("   Total requests:  %d\n", m.stats.TotalRequests)
-	fmt.Printf("   Successful:      %d ✅\n", m.stats.SuccessCount)
-	fmt.Printf("   Rate limited:    %d 🔴\n", m.stats.RateLimited)
-	fmt.Printf("   Backoff events:  %d ⚡\n", m.stats.BackoffCount)
-	fmt.Printf("   Backoff resets:  %d 🔄\n", m.stats.BackoffReset)
-	fmt.Printf("   Errors:          %d ❌\n", m.stats.ErrorCount)
+	fmt.Printf("   Successful:      %d\n", m.stats.SuccessCount)
+	fmt.Printf("   Rate limited:    %d\n", m.stats.RateLimited)
+	fmt.Printf("   Backoff events:  %d\n", m.stats.BackoffCount)
+	fmt.Printf("   Backoff resets:  %d\n", m.stats.BackoffReset)
+	fmt.Printf("   Errors:          %d\n", m.stats.ErrorCount)
 }
 
 // runWorker executes requests for a single host
@@ -228,7 +225,7 @@ func (m *MultiServiceClient) makeRequest(host, agent string, requestNum int) {
 
 	// Wait for rate limiter to allow the request
 	if err := m.limiter.Wait(m.ctx, host); err != nil {
-		fmt.Printf("[client] ❌ [%s] Wait cancelled for request #%d: %v\n", agent, requestNum, err)
+		fmt.Printf("[client] [%s] Wait cancelled for request #%d: %v\n", agent, requestNum, err)
 		atomic.AddInt64(&m.stats.ErrorCount, 1)
 		return
 	}
@@ -237,7 +234,7 @@ func (m *MultiServiceClient) makeRequest(host, agent string, requestNum int) {
 	url := fmt.Sprintf("http://%s", host)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Printf("[client] ❌ [%s] Failed to create request #%d: %v\n", agent, requestNum, err)
+		fmt.Printf("[client] [%s] Failed to create request #%d: %v\n", agent, requestNum, err)
 		atomic.AddInt64(&m.stats.ErrorCount, 1)
 		return
 	}
@@ -246,7 +243,7 @@ func (m *MultiServiceClient) makeRequest(host, agent string, requestNum int) {
 	// Execute request
 	resp, err := m.client.Do(req)
 	if err != nil {
-		fmt.Printf("[client] ❌ [%s] Request #%d failed: %v\n", agent, requestNum, err)
+		fmt.Printf("[client] [%s] Request #%d failed: %v\n", agent, requestNum, err)
 		atomic.AddInt64(&m.stats.ErrorCount, 1)
 		return
 	}
@@ -260,7 +257,7 @@ func (m *MultiServiceClient) makeRequest(host, agent string, requestNum int) {
 	case http.StatusTooManyRequests:
 		m.handleRateLimited(host, agent, requestNum, body)
 	default:
-		fmt.Printf("[client] ⚠️  [%s] Unexpected status %d on request #%d\n", agent, resp.StatusCode, requestNum)
+		fmt.Printf("[client]  [%s] Unexpected status %d on request #%d\n", agent, resp.StatusCode, requestNum)
 		atomic.AddInt64(&m.stats.ErrorCount, 1)
 	}
 }
@@ -274,7 +271,7 @@ func (m *MultiServiceClient) handleSuccess(host, agent string, requestNum int, b
 	if _, err := fmt.Sscanf(string(body), "%f", &seconds); err == nil && seconds >= 0 {
 		delay := time.Duration(seconds * float64(time.Second))
 		m.limiter.SetResourceDelay(host, delay)
-		fmt.Printf("[client] ✅ [%s] 200 OK on request #%d - server delay: %s\n", agent, requestNum, delay.Round(time.Millisecond))
+		fmt.Printf("[client] [%s] 200 OK on request #%d - server delay: %s\n", agent, requestNum, delay.Round(time.Millisecond))
 	}
 
 	// Reset backoff on success (if there was an active backoff)
@@ -282,7 +279,7 @@ func (m *MultiServiceClient) handleSuccess(host, agent string, requestNum int, b
 		m.limiter.ResetBackoff(host)
 		m.hostState.resetBackoffCount(host)
 		atomic.AddInt64(&m.stats.BackoffReset, 1)
-		fmt.Printf("[client] 🔄 [%s] Backoff reset after successful request #%d\n", agent, requestNum)
+		fmt.Printf("[client] [%s] Backoff reset after successful request #%d\n", agent, requestNum)
 	}
 }
 
@@ -304,7 +301,7 @@ func (m *MultiServiceClient) handleRateLimited(host, agent string, requestNum in
 	// Resolve the delay to show what backoff delay was computed
 	backoffDelay := m.limiter.ResolveDelay(m.ctx, host)
 
-	fmt.Printf("[client] 🔴 [%s] 429 on request #%d - backing off (count: %d, delay: %s)\n",
+	fmt.Printf("[client] [%s] 429 on request #%d - backing off (count: %d, delay: %s)\n",
 		agent, requestNum, backoffCount, backoffDelay.Round(time.Millisecond))
 	fmt.Printf("[client]    Server message: %s\n", string(body))
 }

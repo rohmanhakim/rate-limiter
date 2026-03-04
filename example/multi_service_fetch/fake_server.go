@@ -50,8 +50,8 @@ func (s *FakeServer) Start() error {
 	}
 
 	go func() {
-		fmt.Printf("🛡️  Bot-protected server started on http://localhost%s\n", s.port)
-		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Printf("  Bot-protected server started on http://localhost%s\n", s.port)
+		fmt.Println("========================================================")
 		s.server.ListenAndServe()
 	}()
 
@@ -81,9 +81,9 @@ func (s *FakeServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 			assignedDelay: delay,
 			lastRequest:   now,
 		}
-		fmt.Printf("[server] 📥 [%s] First request\n", userAgent)
-		fmt.Printf("[server] ⏱️  Assigned delay: %s\n", delay.Round(time.Millisecond))
-		fmt.Printf("[server] ✅ 200 OK - delay: %.3f\n", delay.Seconds())
+		fmt.Printf("[server] [%s] First request\n", userAgent)
+		fmt.Printf("[server] Assigned delay: %s\n", delay.Round(time.Millisecond))
+		fmt.Printf("[server] 200 OK - delay: %.3f\n", delay.Seconds())
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "%.3f", delay.Seconds())
 		return
@@ -95,9 +95,9 @@ func (s *FakeServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	// Too soon - reject with 429
 	if elapsed < required {
 		remaining := required - elapsed
-		fmt.Printf("[server] 📥 [%s] Request received\n", userAgent)
-		fmt.Printf("[server] ❌ Too early! (elapsed: %s, required: %s)\n", elapsed.Round(time.Millisecond), required.Round(time.Millisecond))
-		fmt.Printf("[server] ⚠️  429 Too Many Requests - wait %s\n", remaining.Round(time.Millisecond))
+		fmt.Printf("[server] [%s] Request received\n", userAgent)
+		fmt.Printf("[server] Too early! (elapsed: %s, required: %s)\n", elapsed.Round(time.Millisecond), required.Round(time.Millisecond))
+		fmt.Printf("[server] 429 Too Many Requests - wait %s\n", remaining.Round(time.Millisecond))
 		w.WriteHeader(http.StatusTooManyRequests)
 		fmt.Fprintf(w, "too early - wait %.3f seconds", remaining.Seconds())
 		return
@@ -108,9 +108,9 @@ func (s *FakeServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	client.assignedDelay = newDelay
 	client.lastRequest = now
 
-	fmt.Printf("[server] 📥 [%s] Request received\n", userAgent)
-	fmt.Printf("[server] ⏱️  New delay assigned: %s\n", newDelay.Round(time.Millisecond))
-	fmt.Printf("[server] ✅ 200 OK - delay: %.3f\n", newDelay.Seconds())
+	fmt.Printf("[server] [%s] Request received\n", userAgent)
+	fmt.Printf("[server] New delay assigned: %s\n", newDelay.Round(time.Millisecond))
+	fmt.Printf("[server] 200 OK - delay: %.3f\n", newDelay.Seconds())
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "%.3f", newDelay.Seconds())
 }

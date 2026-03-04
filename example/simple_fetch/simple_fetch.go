@@ -14,8 +14,8 @@ import (
 )
 
 func main() {
-	fmt.Println("🚀 Rate Limiter Demo - Simple Fetch")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println(" Rate Limiter Demo - Simple Fetch")
+	fmt.Println("==================================================")
 
 	// Start fake server
 	server := NewFakeServer(":8080")
@@ -43,9 +43,9 @@ func main() {
 	client.execute()
 
 	// Cleanup
-	fmt.Println("\n🛑 Shutting down server...")
+	fmt.Println("\n Shutting down server...")
 	server.Stop()
-	fmt.Println("✅ Demo completed!")
+	fmt.Println(" Demo completed!")
 }
 
 // FakeServer is a simple HTTP server with random delay.
@@ -77,7 +77,7 @@ func (s *FakeServer) Start() {
 	}
 
 	go func() {
-		fmt.Printf("🌐 Simple server started on http://localhost%s\n", s.port)
+		fmt.Printf(" Simple server started on http://localhost%s\n", s.port)
 		s.server.ListenAndServe()
 	}()
 }
@@ -86,7 +86,7 @@ func (s *FakeServer) Start() {
 // Returns 200 OK with a random delay in seconds (plain text).
 func (s *FakeServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	delay := s.randomDelay()
-	fmt.Printf("[server] 📥 Request received - returning delay: %s\n", delay.Round(time.Millisecond))
+	fmt.Printf("[server] Request received - returning delay: %s\n", delay.Round(time.Millisecond))
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "%.3f", delay.Seconds())
 }
@@ -126,7 +126,7 @@ func (c *SimpleClient) execute() {
 	const requestCount = 5
 	host := "localhost:8080"
 
-	fmt.Printf("📡 Making %d sequential requests to http://%s\n\n", requestCount, host)
+	fmt.Printf(" Making %d sequential requests to http://%s\n\n", requestCount, host)
 
 	for i := 1; i <= requestCount; i++ {
 		c.makeRequest(host, i)
@@ -137,7 +137,7 @@ func (c *SimpleClient) execute() {
 func (c *SimpleClient) makeRequest(host string, requestNum int) {
 	// Wait for rate limiter to allow the request
 	if err := c.limiter.Wait(c.ctx, host); err != nil {
-		fmt.Printf("[client] ❌ Wait cancelled for request #%d: %v\n", requestNum, err)
+		fmt.Printf("[client] Wait cancelled for request #%d: %v\n", requestNum, err)
 		return
 	}
 
@@ -145,14 +145,14 @@ func (c *SimpleClient) makeRequest(host string, requestNum int) {
 	url := fmt.Sprintf("http://%s", host)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Printf("[client] ❌ Failed to create request #%d: %v\n", requestNum, err)
+		fmt.Printf("[client] Failed to create request #%d: %v\n", requestNum, err)
 		return
 	}
 
 	// Execute request
 	resp, err := c.client.Do(req)
 	if err != nil {
-		fmt.Printf("[client] ❌ Request #%d failed: %v\n", requestNum, err)
+		fmt.Printf("[client] Request #%d failed: %v\n", requestNum, err)
 		return
 	}
 	defer resp.Body.Close()
@@ -165,9 +165,9 @@ func (c *SimpleClient) makeRequest(host string, requestNum int) {
 		if _, err := fmt.Sscanf(string(body), "%f", &seconds); err == nil && seconds >= 0 {
 			serverDelay := time.Duration(seconds * float64(time.Second))
 			c.limiter.SetResourceDelay(host, serverDelay)
-			fmt.Printf("[client] ✅ 200 OK on request #%d - server delay: %s\n", requestNum, serverDelay.Round(time.Millisecond))
+			fmt.Printf("[client] 200 OK on request #%d - server delay: %s\n", requestNum, serverDelay.Round(time.Millisecond))
 		}
 	} else {
-		fmt.Printf("[client] ⚠️  Unexpected status %d on request #%d\n", resp.StatusCode, requestNum)
+		fmt.Printf("[client]   Unexpected status %d on request #%d\n", resp.StatusCode, requestNum)
 	}
 }
