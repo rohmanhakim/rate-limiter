@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	exponentialbackoff "github.com/rohmanhakim/exponential-backoff"
 )
 
 // BackoffOptions configures backoff behavior.
@@ -113,15 +115,27 @@ func (r *ConcurrentRateLimiter) Backoff(ctx context.Context, resource string, op
 	var backoffDelay time.Duration
 	var backoffCount int
 
+	backoffCfg := r.config.backoffConfig()
+
 	if exists {
 		currentHostTiming.backoffCount++
-		currentHostTiming.backoffDelay = exponentialBackoffDelay(currentHostTiming.backoffCount, r.jitter, r.config.backoff, sd)
+		currentHostTiming.backoffDelay = exponentialbackoff.CalculateDelay(
+			currentHostTiming.backoffCount,
+			r.jitter,
+			backoffCfg,
+			exponentialbackoff.WithServerDelay(sd),
+		)
 		backoffDelay = currentHostTiming.backoffDelay
 		backoffCount = currentHostTiming.backoffCount
 		r.resourceTimings[resource] = currentHostTiming
 	} else {
 		// Initialize with backoffCount=1
-		backoffDelay = exponentialBackoffDelay(1, r.jitter, r.config.backoff, sd)
+		backoffDelay = exponentialbackoff.CalculateDelay(
+			1,
+			r.jitter,
+			backoffCfg,
+			exponentialbackoff.WithServerDelay(sd),
+		)
 		backoffCount = 1
 		r.resourceTimings[resource] = resourceTiming{
 			backoffCount: 1,
@@ -212,7 +226,7 @@ func (r *ConcurrentRateLimiter) ResolveDelay(ctx context.Context, host string) t
 
 	r.rngMu.Lock()
 	// add jitter to the final delay (computeJitter protects rng)
-	jitterAmount := computeJitter(jitter)
+	jitterAmount := exponentialbackoff.ComputeJitter(jitter)
 	finalDelay += jitterAmount
 	r.rngMu.Unlock()
 

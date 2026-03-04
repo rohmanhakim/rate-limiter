@@ -1,6 +1,10 @@
 package ratelimiter
 
-import "time"
+import (
+	"time"
+
+	exponentialbackoff "github.com/rohmanhakim/exponential-backoff"
+)
 
 // timing-related data used to track when to consume resource
 type resourceTiming struct {
@@ -29,30 +33,28 @@ func (h resourceTiming) BackoffCount() int {
 // rateLimiterConfig holds the internal configuration for rate limiting logic.
 // It is populated via functional options.
 type rateLimiterConfig struct {
-	jitter      time.Duration
-	backoff     backoffConfig
-	debugLogger DebugLogger
-	attrs       []any
+	jitter         time.Duration
+	backoffInitial time.Duration
+	backoffMult    float64
+	backoffMax     time.Duration
+	debugLogger    DebugLogger
+	attrs          []any
 }
 
-// backoffConfig holds the internal configuration for exponential backoff.
-type backoffConfig struct {
-	initialDuration time.Duration
-	multiplier      float64
-	maxDuration     time.Duration
+// backoffConfig returns an exponentialbackoff.Config for use with the external library.
+func (c rateLimiterConfig) backoffConfig() exponentialbackoff.Config {
+	return exponentialbackoff.MustConfig(c.backoffInitial, c.backoffMax, c.backoffMult)
 }
 
 // defaults returns a retryConfig with sensible default values.
 func defaults() rateLimiterConfig {
 	return rateLimiterConfig{
-		jitter: 0,
-		backoff: backoffConfig{
-			initialDuration: 1 * time.Second,
-			multiplier:      2.0,
-			maxDuration:     1 * time.Minute,
-		},
-		debugLogger: NewNoOpLogger(),
-		attrs:       []any{},
+		jitter:         0,
+		backoffInitial: 1 * time.Second,
+		backoffMult:    2.0,
+		backoffMax:     1 * time.Minute,
+		debugLogger:    NewNoOpLogger(),
+		attrs:          []any{},
 	}
 }
 
@@ -71,7 +73,7 @@ func WithJitter(d time.Duration) RateLimiterOption {
 // Default is 1 second.
 func WithInitialDuration(d time.Duration) RateLimiterOption {
 	return func(c *rateLimiterConfig) {
-		c.backoff.initialDuration = d
+		c.backoffInitial = d
 	}
 }
 
@@ -79,7 +81,7 @@ func WithInitialDuration(d time.Duration) RateLimiterOption {
 // Each subsequent delay is multiplied by this value. Default is 2.0.
 func WithMultiplier(m float64) RateLimiterOption {
 	return func(c *rateLimiterConfig) {
-		c.backoff.multiplier = m
+		c.backoffMult = m
 	}
 }
 
@@ -87,7 +89,7 @@ func WithMultiplier(m float64) RateLimiterOption {
 // Default is 1 minute.
 func WithMaxDuration(d time.Duration) RateLimiterOption {
 	return func(c *rateLimiterConfig) {
-		c.backoff.maxDuration = d
+		c.backoffMax = d
 	}
 }
 

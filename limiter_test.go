@@ -90,13 +90,13 @@ func TestResourceTiming(t *testing.T) {
 func TestNewBackoffConfig(t *testing.T) {
 	config := NewBackoffConfig(2*time.Second, 3.0, 30*time.Second)
 
-	if config.initialDuration != 2*time.Second {
-		t.Errorf("expected initialDuration 2s, got %v", config.initialDuration)
+	if config.InitialDuration() != 2*time.Second {
+		t.Errorf("expected InitialDuration 2s, got %v", config.InitialDuration())
 	}
-	if config.multiplier != 3.0 {
-		t.Errorf("expected multiplier 3.0, got %v", config.multiplier)
+	if config.Multiplier() != 3.0 {
+		t.Errorf("expected Multiplier 3.0, got %v", config.Multiplier())
 	}
-	if config.maxDuration != 30*time.Second {
-		t.Errorf("expected maxDuration 30s, got %v", config.maxDuration)
+	if config.MaxDuration() != 30*time.Second {
+		t.Errorf("expected MaxDuration 30s, got %v", config.MaxDuration())
 	}
 }
