@@ -7,7 +7,6 @@ import "time"
 
 var ComputeJitter = computeJitter
 var ExponentialBackoffDelay = exponentialBackoffDelay
-var MaxDuration = maxDuration
 var DetermineRateLimitReason = determineRateLimitReason
 
 // MarkLastConsumedAsNow exports the private markLastConsumedAsNow method for testing.

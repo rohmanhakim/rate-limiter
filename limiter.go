@@ -2,7 +2,6 @@ package ratelimiter
 
 import (
 	"context"
-	"slices"
 	"sync"
 	"time"
 )
@@ -199,10 +198,8 @@ func (r *ConcurrentRateLimiter) ResolveDelay(ctx context.Context, host string) t
 		return time.Duration(0)
 	}
 
-	delays := []time.Duration{base, currentHostTiming.delay, currentHostTiming.backoffDelay}
-
 	// compute the highest delay between BaseDelay, crawlDelay, and BackoffDelay
-	finalDelay := maxDuration(delays)
+	finalDelay := max(base, currentHostTiming.delay, currentHostTiming.backoffDelay)
 
 	// Determine the rate limit reason based on which delay factor is dominant
 	reason := determineRateLimitReason(base, currentHostTiming.delay, currentHostTiming.backoffDelay)
@@ -263,35 +260,4 @@ func (r *ConcurrentRateLimiter) ResourceTimings() map[string]resourceTiming {
 		copyMap[k] = v
 	}
 	return copyMap
-}
-
-// handy function to sort a slice of time.Duration and return the highest one
-func maxDuration(durations []time.Duration) time.Duration {
-	// guard clause: return 0 for empty slice
-	if len(durations) == 0 {
-		return 0
-	}
-
-	// copy the inputs to not mutate it
-	d := make([]time.Duration, len(durations))
-	copy(d, durations)
-
-	// comparison function for string time.Duration
-	comparison := func(a, b time.Duration) int {
-		// a > b returns -1
-		// a < b returns 1
-		// a == b returns 0
-		if a > b {
-			return -1
-		} else if a < b {
-			return 1
-		}
-		return 0
-	}
-
-	// sort descending, we don't care about sorting stability
-	slices.SortFunc(d, comparison)
-
-	// return the highest (first) one
-	return d[0]
 }
